@@ -9,7 +9,7 @@ specified directory of a file/object store.
 """
 
 dbutils.widgets.text('FHIR_ENDPOINT_URL', 'https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir')
-dbutils.widgets.text('DESTINATION_URL', 'dbfs:/tmp/fhir-export-01')
+dbutils.widgets.text('DESTINATION_URL', 'dbfs:/tmp/DevDays/demo-etl')
 dbutils.widgets.text('EXPORT_RESOURCES', 'Patient,Condition,Observation,Immunization')
 
 FHIR_ENDPOINT_URL = dbutils.widgets.get('FHIR_ENDPOINT_URL')

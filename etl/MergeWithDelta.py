@@ -7,7 +7,7 @@ Encodes the ndjson files as SparkSQL datasets and merges them with the delta tab
 :param DESTINATION_SCHEMA: the name of the data lake schema to merge the resource data into
 """
 
-dbutils.widgets.text('SOURCE_URL', 'dbfs:/tmp/fhir-export-01')
+dbutils.widgets.text('SOURCE_URL', 'dbfs:/tmp/DevDays/demo-etl')
 dbutils.widgets.text('DESTINATION_SCHEMA', 'devdays_fhir')
 
 SOURCE_URL=dbutils.widgets.get('SOURCE_URL')
@@ -24,7 +24,7 @@ from pathling import PathlingContext
 from pathling.datasink import ImportMode
 
 # Initialize Pathling context
-pc = PathlingContext.create(spark, enable_extensions=True)
+pc = PathlingContext.create(spark)
 
 # Load resources data from njdson files. Resource types are infered from file names 
 # e.g.: 'Observation.0003.ndjson' -> Observation.
