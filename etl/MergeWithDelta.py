@@ -4,7 +4,7 @@ Merge resource data form ndjson files into a delta lake schema.
 Encodes the ndjson files as SparkSQL datasets and merges them with the delta tables.
 
 :param SOURCE_URL: the URL to the directory with ndjson encoded resouce files
-:param DESTINATION_SCHEMA: the name of the data lake schema to merge the resouece data into
+:param DESTINATION_SCHEMA: the name of the data lake schema to merge the resource data into
 """
 
 dbutils.widgets.text('SOURCE_URL', 'dbfs:/tmp/fhir-export-01')
