@@ -1,6 +1,19 @@
 # Databricks notebook source
 """
+Demonstrates how to use SQL to extract data from the FHIR resources in the form of delta lake tables, 
+for the pupose of COVID-19 risk factor self-service analytics.
 
+The query uses data across mutliple resources: Patient, Condition, Observation, 
+and  Immunization to produce a flat table with the following data:
+
+  id: patient's id
+  gender: patient's gender
+  birthDate: patients' date of birth
+  postalCode: patient's address postal code
+  hasCHC: has patient been even disgnosed with a heart disease
+  hasCKD: has patient been even diagnosed with a chronic kidney disease
+  hasBMIOver30: has the patient even had BMI over 30
+  isCovidVaccinated: has the patient been vaccianed with any of the COVID-19 vaccines
 """
 
 # Initialise pathling context to register terminology UDFs and connect 
@@ -20,6 +33,8 @@ pc = PathlingContext.create(spark)
 # MAGIC %sql
 # MAGIC --
 # MAGIC -- Select basic patient information
+# MAGIC -- Also include the `id_versioned` column that can be used for effciently resolve references 
+# MAGIC -- to patients in other resources 
 # MAGIC -- 
 # MAGIC SELECT 
 # MAGIC     id, gender, birthDate, 
@@ -33,7 +48,7 @@ pc = PathlingContext.create(spark)
 # MAGIC %sql
 # MAGIC --
 # MAGIC -- Find conditions related to heart diseases.
-# MAGIC -- Condition code subsumes SNOMED concept `56265001`.
+# MAGIC -- Condition code is subsumed by SNOMED concept `56265001`.
 # MAGIC -- 
 # MAGIC SELECT id, subject.reference, code.text FROM condition
 # MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL, NULL), TRUE)
@@ -44,7 +59,7 @@ pc = PathlingContext.create(spark)
 # MAGIC %sql
 # MAGIC --
 # MAGIC -- Find conditions related to  chronic kidney disease.
-# MAGIC -- Condition code subsumes SNOMED concept `709044004``.
+# MAGIC -- Condition code is subsumed by SNOMED concept `709044004``.
 # MAGIC -- 
 # MAGIC SELECT id, subject.reference, code.text FROM condition
 # MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL, NULL), TRUE)
@@ -55,7 +70,10 @@ pc = PathlingContext.create(spark)
 # MAGIC %sql
 # MAGIC -- 
 # MAGIC -- Find Body Mass Index observations
-# MAGIC -- Observation code subsumes LONIC code `39156-5`
+# MAGIC -- Observation code is subsubed by LONIC code `39156-5`
+# MAGIC -- Note, that the value of the observation is a quantity usually expressed in `kg/m2`. 
+# MAGIC -- `valueQuantity._value_canonicalized.value` can be used to obtaint the value always
+# MAGIC -- expressed in UCUM canonical units, in our case `g/m2`.
 # MAGIC -- 
 # MAGIC SELECT 
 # MAGIC     id, subject.reference, valueQuantity.value, valueQuantity.unit, 
@@ -83,7 +101,7 @@ pc = PathlingContext.create(spark)
 # MAGIC %sql
 # MAGIC --  
 # MAGIC -- Select the patient data and join with other resources 
-# MAGIC -- to obtain risk factor and vaccination status.
+# MAGIC -- to obtain risk factors and vaccination status.
 # MAGIC -- 
 # MAGIC
 # MAGIC SELECT 
