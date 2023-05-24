@@ -19,39 +19,31 @@ spark.sql(f"CREATE SCHEMA IF NOT EXISTS {OUTPUT_SQL_SCHEMA}")
 # COMMAND ----------
 
 from pathling import PathlingContext
-from pathling import Expression as fpx
-from pyspark.sql.functions import col
+from pathling import Expression as fpe
 
 pc = PathlingContext.create(spark)
 fhir_ds = pc.read.tables(INPUT_FHIR_SCHEMA)
 
-def encounter(path):
-    return fpx("%s.%s" % ('reverseResolve(Encounter.subject)', path))
+coivd19_view_df = fhir_ds.extract('Patient',
+    columns= [
+        fpe("id"),
+        fpe("gender"),
+        fpe("birthDate"),
+        fpe("name.family.first()").alias('familyName'),
+        fpe("name.given.first()").alias('firstName'),
+        fpe("telecom.where(system='phone').value.first()", "phoneNumber"),
+        fpe("address.postalCode.first()").alias("postalCode"),
+        fpe("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|709044004))", 'hasCKD'),
+        fpe("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))", 'hasCHC'),
+        fpe("reverseResolve(Observation.subject).where(code.subsumedBy(http://loinc.org|39156-5)).exists(valueQuantity > 30 'kg/m2')", "hasBMIOver30"),
+        fpe("(reverseResolve(Immunization.patient).vaccineCode.memberOf('https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines') contains true)").alias("isCovidVaccinated"),
+    ],
+    filters = [
+        "address.country.first() = 'US'"
+    ]
+)
 
-encounter_raw_ds = fhir_ds.extract('Patient', [
-    fpx('id').alias('patient_id'), 
-    fpx('gender').alias('gender'), 
-    fpx("extension('http://hl7.org/fhir/StructureDefinition/patient-birthPlace').valueAddress.country").alias('birth_place_country'),
-    fpx("extension('http://hl7.org/fhir/StructureDefinition/patient-birthPlace').valueAddress.state").alias('birth_place_state'),
-    fpx("extension('http://synthetichealth.github.io/synthea/disability-adjusted-life-years').valueDecimal").alias('disability_adjusted_life_years'),
-    fpx("extension('http://synthetichealth.github.io/synthea/quality-adjusted-life-years').valueDecimal").alias('quality_adjusted_life_years'),
-    encounter('id').alias('encounter_id'),
-    encounter("period.start").alias('encounter_start'),
-    encounter("period.end").alias('encounter_end'),
-    #exp("period.start.until(%resource.period.end, 'minutes')").alias('duration'),
-    encounter('status').alias('encounter_status'),
-    encounter('class').alias('encounter_class_code'),
-    encounter('type.text').alias('encounter_type'),
-    encounter("reasonCode.coding.where(system='http://snomed.info/sct').display.first()").alias('encounter_reason'),
-])
+coivd19_view_df.printSchema()
+coivd19_view_df.show(5)
 
-
-encounter_ds = encounter_raw_ds \
-    .withColumn('encounter_start', col('encounter_start').cast('TIMESTAMP')) \
-    .withColumn('encounter_end', col('encounter_end').cast('TIMESTAMP'))
-
-
-encounter_ds.printSchema()
-encounter_ds.show(5)
-
-encounter_ds.write.saveAsTable(f"{OUTPUT_SQL_SCHEMA}.encounter_view", mode='overwrite')
+coivd19_view_df.write.saveAsTable(f"{OUTPUT_SQL_SCHEMA}.covid19_view", mode='overwrite')

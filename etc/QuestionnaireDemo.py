@@ -31,18 +31,12 @@ ritem_ds = response_ds \
     .withColumn('item0', explode_outer('item')) \
     .withColumn('item1', explode_outer('item0.item')) \
     .withColumn('item2', explode_outer('item1.item')) \
-    .select(col('id'), col('subject'), col('item0.linkid').alias('link_id0'), col('item1.linkid').alias('link_id1'), col('item1.text'), col('item1.answer.valueString').getItem(0).alias('answer'))
+    .select(col('id'), col('subject.reference').alias('subject'), col('item0.linkid').alias('link_id0'), col('item1.linkid').alias('link_id1'), col('item1.text'), col('item1.answer.valueString').getItem(0).alias('answer'))
 display(ritem_ds) 
 
-#BUG: Why subject is NULL ???
-
 # COMMAND ----------
 
-display(ritem_ds.groupBy(col('id')).pivot("link_id1", ['2.1', '2.3', '2.4', '3.1']).agg(first('text').alias('question'), first('answer').alias('answer')))
-
-# COMMAND ----------
-
-fitems = ritem_ds.groupBy(col('id')).pivot("link_id1", ['2.1', '2.3', '2.4', '3.1']).agg(first('answer').alias('answer')) \
+fitems = ritem_ds.groupBy(col('id'), col('subject')).pivot("link_id1", ['2.1', '2.3', '2.4', '3.1']).agg(first('answer').alias('answer')) \
     .withColumnRenamed('2.1', 'gender') \
     .withColumnRenamed('2.3', 'country_of_birth') \
     .withColumnRenamed('2.4', 'marital_status') \
@@ -54,20 +48,11 @@ display(fitems)
 x = ds.extract('QuestionnaireResponse', 
     [
         'id',
-        fpe("item.item.where(linkId='2.4').answer.valueString").alias("maritalStatus"), 
-        fpe("item.item.where(linkId='3.1').answer.valueString").alias("smoker"), 
-    ], 
-    filters=["id = 'f201'"])
-display(x)
-#BUG: should be unnested differently ??? and takes 1.11 minutes to RUN !!!
-
-# COMMAND ----------
-
-x = ds.extract('QuestionnaireResponse', 
-    [
-        'id',
-        fpe("item.item.where(linkId='2.4').answer.valueString contains 'married'").alias("isMarried"), 
-        fpe("item.item.where(linkId='3.1').answer.valueString contains 'No'").alias("nonSmoker"), 
+        fpe("subject.reference").alias("subject"),
+        fpe("item.item.where(linkId='2.1').answer.valueString.first()").alias("gender"), 
+        fpe("item.item.where(linkId='2.3').answer.valueString.first()").alias("country_of_birth"), 
+        fpe("item.item.where(linkId='2.4').answer.valueString.first()").alias("maritial_status"), 
+        fpe("item.item.where(linkId='3.1').answer.valueString.first()").alias("smoker"), 
     ], 
     filters=["id = 'f201'"])
 display(x)

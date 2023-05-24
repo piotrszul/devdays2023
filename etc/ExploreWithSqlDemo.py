@@ -31,7 +31,6 @@ INPUT_FHIR_SCHEMA='devdays_fhir'
 # MAGIC %sql
 # MAGIC SELECT id, subject, code FROM condition
 # MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL, NULL), TRUE);
-# MAGIC --ENH: Add a UDF for creating the coding and or snomed coding
 
 # COMMAND ----------
 
