@@ -21,7 +21,7 @@ print(f"""Extracting covid-19 analytics view:
 # COMMAND ----------
 
 from pathling import PathlingContext
-from pathling import Expression as fpe
+from pathling import Expression as exp
 
 # Initialize Pathling context
 pc = PathlingContext.create(spark)
@@ -32,14 +32,14 @@ fhir_ds = pc.read.tables(INPUT_FHIR_SCHEMA)
 # Use the extract() operation to define the covid-19 view
 coivd19_view_df = fhir_ds.extract('Patient',
     columns= [
-        fpe("id"),
-        fpe("gender"),
-        fpe("birthDate"),
-        fpe("address.postalCode.first()").alias("postalCode"),
-        fpe("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|709044004))", 'hasCKD'),
-        fpe("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))", 'hasCHC'),
-        fpe("reverseResolve(Observation.subject).where(code.subsumedBy(http://loinc.org|39156-5)).exists(valueQuantity > 30 'kg/m2')", "hasBMIOver30"),
-        fpe("(reverseResolve(Immunization.patient).vaccineCode.memberOf('https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines') contains true)").alias("isCovidVaccinated"),
+        exp("id"),
+        exp("gender"),
+        exp("birthDate"),
+        exp("address.postalCode.first()").alias("postalCode"),
+        exp("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|709044004))").alias("hasCKD"),
+        exp("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))").alias("hasCHC"),
+        exp("reverseResolve(Observation.subject).where(code.subsumedBy(http://loinc.org|39156-5)).exists(valueQuantity > 30 'kg/m2')").alias("hasBMIOver30"),
+        exp("reverseResolve(Immunization.patient).vaccineCode.memberOf('https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines').anyTrue()").alias("isCovidVaccinated"),
     ],
     filters = [
         "address.country.first() = 'US'"
@@ -49,6 +49,7 @@ coivd19_view_df = fhir_ds.extract('Patient',
 # Load the extracted data to the destination schema
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {OUTPUT_SQL_SCHEMA}")
 sql_view_name = f"{OUTPUT_SQL_SCHEMA}.covid19_view"
+
 coivd19_view_df.write.saveAsTable(sql_view_name, mode='overwrite')
 
 #DEBUG: Display the schema and the data sample from the created view

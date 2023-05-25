@@ -51,7 +51,7 @@ pc = PathlingContext.create(spark)
 # MAGIC -- Condition code is subsumed by SNOMED concept `56265001`.
 # MAGIC -- 
 # MAGIC SELECT id, subject.reference, code.text FROM condition
-# MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL, NULL), TRUE)
+# MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL), TRUE)
 # MAGIC LIMIT 5;
 
 # COMMAND ----------
@@ -62,7 +62,7 @@ pc = PathlingContext.create(spark)
 # MAGIC -- Condition code is subsumed by SNOMED concept `709044004``.
 # MAGIC -- 
 # MAGIC SELECT id, subject.reference, code.text FROM condition
-# MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL, NULL), TRUE)
+# MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL), TRUE)
 # MAGIC LIMIT 5;
 
 # COMMAND ----------
@@ -80,7 +80,7 @@ pc = PathlingContext.create(spark)
 # MAGIC     valueQuantity._value_canonicalized.value AS canonical_value, valueQuantity._code_canonicalized AS canonical_unit, 
 # MAGIC     valueQuantity._value_canonicalized.value / 1000 as bmiValue
 # MAGIC FROM observation 
-# MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://loinc.org', NULL, '39156-5', NULL, NULL, NULL), TRUE)
+# MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://loinc.org', NULL, '39156-5', NULL, NULL), TRUE)
 # MAGIC LIMIT 5;
 
 # COMMAND ----------
@@ -103,7 +103,6 @@ pc = PathlingContext.create(spark)
 # MAGIC -- Select the patient data and join with other resources 
 # MAGIC -- to obtain risk factors and vaccination status.
 # MAGIC -- 
-# MAGIC
 # MAGIC SELECT 
 # MAGIC   patient.id, patient.gender, patient.birthDate, 
 # MAGIC   patient.address[0].postalCode AS postalCode,
@@ -114,15 +113,15 @@ pc = PathlingContext.create(spark)
 # MAGIC FROM  patient
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT subject.reference AS ref 
-# MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL, NULL), TRUE)) 
+# MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL), TRUE)) 
 # MAGIC     AS chc ON patient.id_versioned = chc.ref
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT subject.reference AS ref
-# MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL, NULL), TRUE)) 
+# MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL), TRUE)) 
 # MAGIC     AS ckd ON patient.id_versioned = ckd.ref
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT subject.reference AS ref
-# MAGIC         FROM observation WHERE subsumes(code.coding, struct(NULL, 'http://loinc.org', NULL, '39156-5', NULL, NULL, NULL), TRUE) AND valueQuantity.value > 30) 
+# MAGIC         FROM observation WHERE subsumes(code.coding, struct(NULL, 'http://loinc.org', NULL, '39156-5', NULL, NULL), TRUE) AND valueQuantity.value > 30) 
 # MAGIC     AS bmi ON patient.id_versioned = bmi.ref
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT patient.reference AS ref  FROM immunization WHERE member_of(vaccineCode.coding, 'https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines'))
