@@ -10,14 +10,24 @@ and  Immunization to produce a flat table with the following data:
   gender: patient's gender
   birthDate: patients' date of birth
   postalCode: patient's address postal code
-  hasCHC: has patient been even disgnosed with a heart disease
-  hasCKD: has patient been even diagnosed with a chronic kidney disease
-  hasBMIOver30: has the patient even had BMI over 30
+  hasHD: has the patient been ever disgnosed with a heart disease
+  hasCKD: has the patient been ever diagnosed with a chronic kidney disease
+  hasBMIOver30: has the patient ever had BMI over 30
   isCovidVaccinated: has the patient been vaccianed with any of the COVID-19 vaccines
 """
 
 # Initialise pathling context to register terminology UDFs and connect 
 # the default terminology server
+#
+# The relevant UDFs are:
+#
+# member_of(coding_or_codings, value_set_url):
+#   tests for membership in the value set of any of the codings
+#
+# subsumes(coding_or_codings_A, coding_or_codings_B, reverse):
+#     if reverse is FALSE tests if any of coding A subsumes any of coding B
+#     if reverse is TRUE tests if any of coding A is subsumned by and of coding B
+#
 
 from pathling import PathlingContext
 pc = PathlingContext.create(spark)
@@ -106,7 +116,7 @@ pc = PathlingContext.create(spark)
 # MAGIC SELECT 
 # MAGIC   patient.id, patient.gender, patient.birthDate, 
 # MAGIC   patient.address[0].postalCode AS postalCode,
-# MAGIC   NOT ISNULL(chc.ref) as hasCHC,
+# MAGIC   NOT ISNULL(hd.ref) as hasHD,
 # MAGIC   NOT ISNULL(ckd.ref) as hasCKD,
 # MAGIC   NOT ISNULL(bmi.ref) as hasBMIOver30,
 # MAGIC   NOT ISNULL(covid.ref) as isCovidVaccinated
@@ -114,7 +124,7 @@ pc = PathlingContext.create(spark)
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT subject.reference AS ref 
 # MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL), TRUE)) 
-# MAGIC     AS chc ON patient.id_versioned = chc.ref
+# MAGIC     AS hd ON patient.id_versioned = hd.ref
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT subject.reference AS ref
 # MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL), TRUE)) 

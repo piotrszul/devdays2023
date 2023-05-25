@@ -11,9 +11,9 @@ and  Immunization to produce a flat table with the following data:
   gender: patient's gender
   birthDate: patients' date of birth
   postalCode: patient's address postal code
-  hasCHC: has patient been even disgnosed with a heart disease
-  hasCKD: has patient been even diagnosed with a chronic kidney disease
-  hasBMIOver30: has the patient even had BMI over 30
+  hasHD: has the patient been ever disgnosed with a heart disease
+  hasCKD: has the patient been ever diagnosed with a chronic kidney disease
+  hasBMIOver30: has the patient ever had BMI over 30
   isCovidVaccinated: has the patient been vaccianed with any of the COVID-19 vaccines
 """
 
@@ -36,7 +36,7 @@ spark.catalog.setCurrentDatabase('devdays_fhir')
 # MAGIC SELECT 
 # MAGIC   patient.id, patient.gender, patient.birthDate, 
 # MAGIC   patient.address[0].postalCode AS postalCode,
-# MAGIC   NOT ISNULL(chc.ref) as hasCHC,
+# MAGIC   NOT ISNULL(hd.ref) as hasHC,
 # MAGIC   NOT ISNULL(ckd.ref) as hasCKD,
 # MAGIC   NOT ISNULL(bmi.ref) as hasBMIOver30,
 # MAGIC   NOT ISNULL(covid.ref) as isCovidVaccinated
@@ -44,7 +44,7 @@ spark.catalog.setCurrentDatabase('devdays_fhir')
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT subject.reference AS ref 
 # MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL), TRUE)) 
-# MAGIC     AS chc ON patient.id_versioned = chc.ref
+# MAGIC     AS hd ON patient.id_versioned = hd.ref
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT subject.reference AS ref
 # MAGIC         FROM condition WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL), TRUE)) 
@@ -90,8 +90,8 @@ covid19_view_df = fhir_ds.extract('Patient',
         exp("gender"),
         exp("birthDate"),
         exp("address.postalCode.first()").alias("postalCode"),
+        exp("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))").alias("hasHD"),
         exp("reverseResolve(Condition.subject).exists($this.code.subsumedBy(http://snomed.info/sct|709044004))").alias("hasCKD"),
-        exp("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))").alias("hasCHC"),
         exp("reverseResolve(Observation.subject).where(code.subsumedBy(http://loinc.org|39156-5)).exists(valueQuantity > 30 'kg/m2')").alias("hasBMIOver30"),
         exp("reverseResolve(Immunization.patient).vaccineCode.memberOf('https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines').anyTrue()").alias("isCovidVaccinated"),
     ],
