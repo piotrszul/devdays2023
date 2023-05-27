@@ -26,7 +26,7 @@ and  Immunization to produce a flat table with the following data:
 #
 # subsumes(coding_or_codings_A, coding_or_codings_B, reverse):
 #     if reverse is FALSE tests if any of coding A subsumes any of coding B
-#     if reverse is TRUE tests if any of coding A is subsumned by and of coding B
+#     if reverse is TRUE tests if any of coding A is subsumed by and of coding B
 #
 
 from pathling import PathlingContext
@@ -69,7 +69,7 @@ pc = PathlingContext.create(spark)
 # MAGIC %sql
 # MAGIC --
 # MAGIC -- Find conditions related to  chronic kidney disease.
-# MAGIC -- Condition code is subsumed by SNOMED concept `709044004``.
+# MAGIC -- Condition code is subsumed by SNOMED concept `709044004`.
 # MAGIC -- 
 # MAGIC SELECT id, subject.reference, code.text FROM condition
 # MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL), TRUE)

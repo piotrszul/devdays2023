@@ -28,13 +28,24 @@ pc = PathlingContext.create(spark)
 
 # Load resources data from njdson files. Resource types are infered from file names 
 # e.g.: 'Observation.0003.ndjson' -> Observation.
-# Creates a `DataSource` instance, 
+# Creates a `DataSource` instance, which conceptually maps
+# resource type to their corresponding Spark data frames.
+# So in our case: 
+# { 
+#   'Patient' -> patient_data_frame,
+#   'Condition' -> condition_data_frame,
+#   ...
+# }
 # see: https://pathling.csiro.au/docs/python/pathling.html#pathling.datasource.DataSource
-resources = pc.read.ndjson(SOURCE_URL)
+fhir_resources_ds = pc.read.ndjson(SOURCE_URL)
 
-# Create the destination schema and merge the new data into it
+# Create the destination schema
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {DESTINATION_SCHEMA}")
-resources.write.tables(DESTINATION_SCHEMA, ImportMode.MERGE)
+
+# Merge the FHIR data form the `SOURCE_URL` into it the `DESTINATION_SCHEMA`.
+# For each resource in the `fhir_resources_ds` merge its dataframe with the 
+# data in the resource table in the schema.
+fhir_resources_ds.write.tables(DESTINATION_SCHEMA, ImportMode.MERGE)
 
 #DEBUG: Dislay created/existing tables in the destination schema
 print(f"Tables in schema {DESTINATION_SCHEMA}:")

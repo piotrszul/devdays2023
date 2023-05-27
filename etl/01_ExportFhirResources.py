@@ -4,7 +4,7 @@ Bulk export specified FHIR resources from the provided FHIR server and save the 
 specified directory of a file/object store.
 
 :param FHIR_ENDPOINT_URL: the URL to the FHIR API endpoing with bulk export capabilites
-:param DESTINATION_URL: the URL to the dirctory to save the exported resource files
+:param DESTINATION_URL: the URL to the directory to save the exported resource files
 :param EXPORT_RESOURCES: coma spearated list of resource names to export
 """
 

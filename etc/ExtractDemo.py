@@ -79,7 +79,7 @@ fhir_ds = pc.read.tables()
 #  - `Patient` as the main resource
 #  - `reverseResolve()` to "join" data from other resources
 #  - `subsumedBy()` and `memberOf()` terminology functions
-#  -  `Quantity` literals and unit aware `Quantity` comparison 
+#  - `Quantity` literals and unit aware `Quantity` comparison 
 # 
 # For supported fhirpath subset see: https://pathling.csiro.au/docs/fhirpath 
 #
@@ -90,8 +90,8 @@ covid19_view_df = fhir_ds.extract('Patient',
         exp("gender"),
         exp("birthDate"),
         exp("address.postalCode.first()").alias("postalCode"),
-        exp("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))").alias("hasHD"),
-        exp("reverseResolve(Condition.subject).exists($this.code.subsumedBy(http://snomed.info/sct|709044004))").alias("hasCKD"),
+        exp("reverseResolve(Condition.subject).exists($this.code.subsumedBy(http://snomed.info/sct|56265001))").alias("hasHD"),
+        exp("reverseResolve(Condition.subject).exists(this.code.subsumedBy(http://snomed.info/sct|709044004))").alias("hasCKD"),
         exp("reverseResolve(Observation.subject).where(code.subsumedBy(http://loinc.org|39156-5)).exists(valueQuantity > 30 'kg/m2')").alias("hasBMIOver30"),
         exp("reverseResolve(Immunization.patient).vaccineCode.memberOf('https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines').anyTrue()").alias("isCovidVaccinated"),
     ],
@@ -99,5 +99,4 @@ covid19_view_df = fhir_ds.extract('Patient',
         "address.country.first() = 'US'"
     ]
 )
-
 display(covid19_view_df)
