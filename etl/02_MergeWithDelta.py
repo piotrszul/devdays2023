@@ -39,6 +39,11 @@ pc = PathlingContext.create(spark)
 # see: https://pathling.csiro.au/docs/python/pathling.html#pathling.datasource.DataSource
 fhir_resources_ds = pc.read.ndjson(SOURCE_URL)
 
+#DEBUG: Show some of the encoded resources
+print("Dataframe for Patient resource")
+print(fhir_resources_ds.read('Patient'))
+print()
+
 # Create the destination schema
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {DESTINATION_SCHEMA}")
 

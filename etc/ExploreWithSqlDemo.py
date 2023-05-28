@@ -14,6 +14,9 @@ and  Immunization to produce a flat table with the following data:
   hasCKD: has the patient been ever diagnosed with a chronic kidney disease
   hasBMIOver30: has the patient ever had BMI over 30
   isCovidVaccinated: has the patient been vaccianed with any of the COVID-19 vaccines
+
+For simplicity, we assume that the time of the immunization, diagnosis
+or observation is not important in this scenario.
 """
 
 # Initialise pathling context to register terminology UDFs and connect 
@@ -48,7 +51,7 @@ pc = PathlingContext.create(spark)
 # MAGIC -- 
 # MAGIC SELECT 
 # MAGIC     id, gender, birthDate, 
-# MAGIC     address[0].postalCode AS postalCode, address[0].country  AS country, 
+# MAGIC     address[0].postalCode AS postalCode, 
 # MAGIC     id_versioned 
 # MAGIC FROM  patient 
 # MAGIC LIMIT 5;
@@ -58,7 +61,7 @@ pc = PathlingContext.create(spark)
 # MAGIC %sql
 # MAGIC --
 # MAGIC -- Find conditions related to heart diseases.
-# MAGIC -- Condition code is subsumed by SNOMED concept `56265001`.
+# MAGIC -- Condition code is subsumed by SNOMED concept `56265001` - "Heart disease (disorder)"
 # MAGIC -- 
 # MAGIC SELECT id, subject.reference, code.text FROM condition
 # MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '56265001', NULL, NULL), TRUE)
@@ -66,21 +69,27 @@ pc = PathlingContext.create(spark)
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC --
-# MAGIC -- Find conditions related to  chronic kidney disease.
-# MAGIC -- Condition code is subsumed by SNOMED concept `709044004`.
-# MAGIC -- 
-# MAGIC SELECT id, subject.reference, code.text FROM condition
-# MAGIC WHERE subsumes(code.coding, struct(NULL, 'http://snomed.info/sct', NULL, '709044004', NULL, NULL), TRUE)
-# MAGIC LIMIT 5;
+from pyspark.sql.functions import col
+from pathling.coding import Coding
+from pathling.udfs import subsumed_by
+
+#
+# Find conditions related to  chronic kidney disease.
+# Condition code is subsumed by SNOMED concept `709044004` - "Chronic kidney disease (disorder)"
+#
+display(
+    spark.read.table('condition')
+        .select(col('id'), col('subject.reference'), col('code.text'))
+        .where(subsumed_by(col('code.coding'), Coding.of_snomed('709044004')))
+        .limit(5)
+) 
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- 
 # MAGIC -- Find Body Mass Index observations
-# MAGIC -- Observation code is subsubed by LONIC code `39156-5`
+# MAGIC -- Observation code is subsubed by LONIC code `39156-5` - "Body mass index (BMI) [Ratio]"
 # MAGIC -- Note, that the value of the observation is a quantity usually expressed in `kg/m2`. 
 # MAGIC -- `valueQuantity._value_canonicalized.value` can be used to obtaint the value always
 # MAGIC -- expressed in UCUM canonical units, in our case `g/m2`.

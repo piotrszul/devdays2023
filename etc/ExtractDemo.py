@@ -15,6 +15,9 @@ and  Immunization to produce a flat table with the following data:
   hasCKD: has the patient been ever diagnosed with a chronic kidney disease
   hasBMIOver30: has the patient ever had BMI over 30
   isCovidVaccinated: has the patient been vaccianed with any of the COVID-19 vaccines
+
+For simplicity, we assume that the time of the immunization, diagnosis
+or observation is not important in this scenario.
 """
 
 # Initialise pathling context connected 
@@ -23,16 +26,15 @@ and  Immunization to produce a flat table with the following data:
 from pathling import PathlingContext
 pc = PathlingContext.create(spark)
 
-# Set the current schema to the FHIR delta lake.
-spark.catalog.setCurrentDatabase('devdays_fhir')
-
-
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- 
 # MAGIC -- The SQL based query
 # MAGIC -- 
+# MAGIC
+# MAGIC USE devdays_fhir;
+# MAGIC
 # MAGIC SELECT 
 # MAGIC   patient.id, patient.gender, patient.birthDate, 
 # MAGIC   patient.address[0].postalCode AS postalCode,
@@ -56,6 +58,7 @@ spark.catalog.setCurrentDatabase('devdays_fhir')
 # MAGIC LEFT OUTER JOIN (
 # MAGIC         SELECT DISTINCT patient.reference AS ref  FROM immunization WHERE member_of(vaccineCode.coding, 'https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines'))
 # MAGIC     AS covid ON patient.id_versioned = covid.ref
+# MAGIC ORDER BY id
 # MAGIC LIMIT 5;    
 
 # COMMAND ----------
@@ -67,7 +70,7 @@ from pathling import Expression as exp
 # see: https://pathling.csiro.au/docs/python/pathling.html#pathling.datasource.DataSources.tables
 #
 
-fhir_ds = pc.read.tables()
+fhir_ds = pc.read.tables('devdays_fhir')
 
 #
 # Apply the `extract()` operation to define the ouput view using fhirpath expressions 
@@ -91,7 +94,7 @@ covid19_view_df = fhir_ds.extract('Patient',
         exp("birthDate"),
         exp("address.postalCode.first()").alias("postalCode"),
         exp("reverseResolve(Condition.subject).exists($this.code.subsumedBy(http://snomed.info/sct|56265001))").alias("hasHD"),
-        exp("reverseResolve(Condition.subject).exists(this.code.subsumedBy(http://snomed.info/sct|709044004))").alias("hasCKD"),
+        exp("reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|709044004))").alias("hasCKD"),
         exp("reverseResolve(Observation.subject).where(code.subsumedBy(http://loinc.org|39156-5)).exists(valueQuantity > 30 'kg/m2')").alias("hasBMIOver30"),
         exp("reverseResolve(Immunization.patient).vaccineCode.memberOf('https://aehrc.csiro.au/fhir/ValueSet/covid-19-vaccines').anyTrue()").alias("isCovidVaccinated"),
     ],
@@ -99,4 +102,8 @@ covid19_view_df = fhir_ds.extract('Patient',
         "address.country.first() = 'US'"
     ]
 )
-display(covid19_view_df)
+display('Extract:')
+display(covid19_view_df.orderBy('id').limit(5))
+display('SQL:')
+display(_sqldf)
+
