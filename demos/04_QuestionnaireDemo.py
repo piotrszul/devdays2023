@@ -23,13 +23,9 @@ fhir_ds = pc.read.ndjson("s3://pathling-demo/staging/devdays/questionnaire")
 
 # COMMAND ----------
 
-# 
-# Obtain the data frame for `Questionnaire` resource.
-#     
-questionnaire_df = fhir_ds.read('Questionnaire')
-
 #
-# Progresively unnnest items of each of the questionnaires. 
+# Progresively unnnest items of each of the questionnaires, 
+# to create the outline of each using their `item.linkId` elements.
 # We expect the schema of:
 # 
 # Questionnaire: struct
@@ -52,6 +48,59 @@ questionnaire_df = fhir_ds.read('Questionnaire')
 #                       item: array[struct] // level 5 (no item here)
 #                           linkid: string
 #                           text: string
+
+questionnarie_structure_df = fhir_ds.extract('Questionnaire', 
+    [
+        'id',
+        exp("item.linkId").alias("linkId_0"), 
+        exp("item.item.linkId").alias("linkId_1"), 
+        exp("item.item.item.linkId").alias("linkId_2"), 
+        exp("item.item.item.item.linkId").alias("linkId_3"),
+        exp("item.item.item.item.item.linkId").alias("linkId_4"),
+        exp("item.item.item.item.item.item.linkId").alias("linkId_5"),
+    ]
+)    
+    
+display(questionnarie_structure_df)
+
+# COMMAND ----------
+
+#
+# Extract selected responses to the `f201` questionnaire using 
+# fhirpath and the `extract()` operation.
+#
+# The selected response items:
+# - linkid: 2.1 -> gender
+# - linkid: 2.3 -> country_of_birth
+# - linkid: 2.4 -> marital_status
+# - linkid: 3.1 -> smoker
+# 
+# NOTE: subject.reference can be used to join the responses with Patient resource.
+#  
+f201_responses_df = fhir_ds.extract('QuestionnaireResponse', 
+    [
+        'id',
+        exp("subject.reference").alias("subject"),
+        exp("item.item.where(linkId='2.1').answer.valueString.first()").alias("gender"), 
+        exp("item.item.where(linkId='2.3').answer.valueString.first()").alias("country_of_birth"), 
+        exp("item.item.where(linkId='2.4').answer.valueString.first()").alias("maritial_status"), 
+        exp("item.item.where(linkId='3.1').answer.valueString.first()").alias("smoker"), 
+    ], 
+    filters=["id = 'f201'"])
+    
+display(f201_responses_df)
+
+# COMMAND ----------
+
+# 
+# Obtain the data frame for `Questionnaire` resource.
+#     
+questionnaire_df = fhir_ds.read('Questionnaire')
+
+#
+# Progresively unnnest items of each of the questionnaires, 
+# to create the outline of each using their `item.linkId` elements.
+# 
 
 # NOTE: We are using pyspark python dataframe API
 # but the same can be achieved in SQL with subqueries.
@@ -117,31 +166,4 @@ f201_responses_df = response_item_df.groupBy(col('id'), col('subject')) \
     .withColumnRenamed('2.3', 'country_of_birth') \
     .withColumnRenamed('2.4', 'marital_status') \
     .withColumnRenamed('3.1', 'smoker') 
-display(f201_responses_df)
-
-# COMMAND ----------
-
-#
-# Extract selected responses to the `f201` questionnaire using 
-# fhirpath and the `extract()` operation.
-#
-# The selected response items:
-# - linkid: 2.1 -> gender
-# - linkid: 2.3 -> country_of_birth
-# - linkid: 2.4 -> marital_status
-# - linkid: 3.1 -> smoker
-# 
-# NOTE: subject.reference can be used to join the responses with Patient resource.
-#  
-f201_responses_df = fhir_ds.extract('QuestionnaireResponse', 
-    [
-        'id',
-        exp("subject.reference").alias("subject"),
-        exp("item.item.where(linkId='2.1').answer.valueString.first()").alias("gender"), 
-        exp("item.item.where(linkId='2.3').answer.valueString.first()").alias("country_of_birth"), 
-        exp("item.item.where(linkId='2.4').answer.valueString.first()").alias("maritial_status"), 
-        exp("item.item.where(linkId='3.1').answer.valueString.first()").alias("smoker"), 
-    ], 
-    filters=["id = 'f201'"])
-    
 display(f201_responses_df)

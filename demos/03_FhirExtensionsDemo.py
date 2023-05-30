@@ -1,8 +1,7 @@
 # Databricks notebook source
-
 """
-Demonstrates how to use SQL and fhirpath with the Pathling `extract()` operation
-to obtain extension values.
+Demonstrates how to use FHIRPath with the Pathling `extract()` operation
+and SQL to obtain extension values.
 
 
 Extensions definf on `Patient` resource:
@@ -37,6 +36,27 @@ pc = PathlingContext.create(spark, enable_extensions = True)
 # 
 fhir_ds = pc.read.ndjson('s3://pathling-demo/staging/devdays/ndjson/')
 
+# COMMAND ----------
+
+from pathling import Expression as exp
+
+#
+# Select extension values using `extract()` operation 
+# and the FHIRPath `extension()` function.
+#
+
+result = fhir_ds.extract('Patient', [
+    exp("id"), 
+    exp("extension('http://hl7.org/fhir/StructureDefinition/patient-birthPlace').valueAddress.city.first()").alias("city_of_birth"),
+    exp("extension('http://synthetichealth.github.io/synthea/quality-adjusted-life-years').valueDecimal").alias("quality_adjusted_life_years"),
+    exp("address.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal.first()").alias("address_latitude"),
+    exp("address.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('longitude').valueDecimal.first()").alias("address_longitude"),
+])
+
+display(result.orderBy('id'))
+
+# COMMAND ----------
+
 #
 # Obtain the data frame for the `Patient` resource and register it a temorary view
 # so that it can be used in SQL queries.
@@ -59,22 +79,3 @@ fhir_ds.read('Patient').createOrReplaceTempView('patient_with_extensions')
 # MAGIC         e -> e.url='longitude')[0].valueDecimal AS address_longitude 
 # MAGIC FROM patient_with_extensions 
 # MAGIC ORDER BY id;
-
-# COMMAND ----------
-
-from pathling import Expression as exp
-
-#
-# Select extension values using `extract()` operation 
-# and the fhirpath `extension()` function.
-#
-
-result = fhir_ds.extract('Patient', [
-    exp("id"), 
-    exp("extension('http://hl7.org/fhir/StructureDefinition/patient-birthPlace').valueAddress.city.first()").alias("city_of_birth"),
-    exp("extension('http://synthetichealth.github.io/synthea/quality-adjusted-life-years').valueDecimal").alias("quality_adjusted_life_years"),
-    exp("address.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal.first()").alias("address_latitude"),
-    exp("address.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('longitude').valueDecimal.first()").alias("address_longitude"),
-])
-
-display(result.orderBy('id'))
