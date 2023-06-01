@@ -3,6 +3,8 @@
 Bulk export specified FHIR resources from the provided FHIR server and save the data in the 
 specified directory of a file/object store.
 
+By defaul bulk export the 100 patients database from https://bulk-data.smarthealthit.org/.
+
 :param FHIR_ENDPOINT_URL: the URL to the FHIR API endpoing with bulk export capabilites
 :param DESTINATION_URL: the URL to the directory to save the exported resource files
 :param EXPORT_RESOURCES: coma spearated list of resource names to export

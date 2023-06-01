@@ -15,9 +15,9 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC USE devdays_sql;
+# MAGIC USE devdays_sql_1000;
 # MAGIC SELECT 
-# MAGIC   substring(postalCode,1,3) area_code, 
+# MAGIC   postalCode as  area_code, 
 # MAGIC   (cast(hasBMIOver30 AS INT) + 3 * cast(hasCKD AS INT) + 2 * cast(hasHD AS INT)) AS risk_score
 # MAGIC FROM covid19_view 
 # MAGIC WHERE NOT isCovidVaccinated AND postalCode IS NOT NULL; 
